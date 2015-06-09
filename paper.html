@@ -1,0 +1,588 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"  
+  "http://www.w3.org/TR/html4/loose.dtd">  
+<html > 
+<head>
+  <title>Remote Onion Peeling</title> 
+  <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1"> 
+  <meta name="generator" content="TeX4ht (http://www.tug.org/tex4ht/)"> 
+  <meta name="originator" content="TeX4ht (http://www.tug.org/tex4ht/)"> 
+  <!-- html --> 
+  <meta name="src" content="paper.tex"> 
+  <meta name="date" content="2015-06-08 03:46:00"> 
+  <link rel="stylesheet" type="text/css" href="paper.css"> 
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+  <script src="demo.js"></script>
+</head><body 
+>
+   <h3 class="likesectionHead"><a 
+ id="x1-1000"></a>Remote Onion Peeling</h3>
+<!--l. 8--><p class="noindent" >This document describes a new protocol for anonymous communication over mobile
+ad hoc networks (MANETs) that I believe to be a significant improvement over
+the existing literature, both in terms of degree of anonymity and latency.
+<br 
+class="newline" /><br 
+class="newline" />Achieving anonymous communication over MANETs presents a significant challenge,
+with threats and constraints that differ dramatically from protocols that work over
+copper and fiber. Still, it is useful to illustrate Remote Onion Peeling (ROP) in
+contrast with systems like Tor, if only because the reader is probably more familiar
+with traditional onion routing.
+<!--l. 13--><p class="noindent" >
+   <h3 class="sectionHead"><span class="titlemark">1   </span> <a 
+ id="x1-20001"></a>Tor</h3>
+<!--l. 14--><p class="noindent" >Tor [1] works using layered encryption. When Alice wishes to send a message to Eve,
+She first encrypts the message with Devon&#8217;s key, then with the Carlos&#8217;s key, and
+finally with Bob&#8217;s key. She then sends the message to Bob, who strips a layer of
+encryption and sends it to Carlos. Carlos does the same and sends it to
+Devon. When Devon finally receives the message in plaintext, he passes it
+along to Eve. If Eve wishes to reply, she replies to Devon, who encrypts her
+reply with <span 
+class="cmmi-10">K</span><sub><span 
+class="cmmi-7">a</span></sub>, <span 
+class="cmmi-10">K</span><sub><span 
+class="cmmi-7">b</span></sub>, and <span 
+class="cmmi-10">K</span><sub><span 
+class="cmmi-7">c</span></sub> respectively and sends it back along the circuit.
+<br 
+class="newline" /><br 
+class="newline" />This works great over the internet but fares poorly over MANETs for the following reasons:
+<!--l. 19--><p class="indent" >
+     <ol  class="enumerate1" >
+     <li 
+  class="enumerate" id="x1-2002x1"><span 
+class="cmbx-10">GPA. </span>For the global passive adversary, it is easy to track packets from
+     source to destination. Tor doesn&#8217;t defend against the GPA because to do
+     so would necessitate cover traffic and the designers didn&#8217;t want to make
+     the bandwidth tradeoff. Unfortunately, for wireless networks, the global
+     passive adversary is local.
+     </li>
+     <li 
+  class="enumerate" id="x1-2004x2"><span 
+class="cmbx-10">March Down. </span>Adversary nodes in a MANET can move as they please,
+     and can get on the path of any circuit that they please. Given enough
+     time, the physical connection between members of a circuit will break,
+     and in order for it to be repaired it will have to go through the adversary
+     node. By marching down the physical path of a circuit, nodes can discover
+     the identity of onion nodes, and eventually the sender node itself.
+     </li>
+     <li 
+  class="enumerate" id="x1-2006x3"><span 
+class="cmbx-10">Sybil Attacks. </span>Tor uses directory authorities to verify the existence of
+     nodes.  Because  a  wireless  peer  to  peer  network  is  decentralized,  sybil
+     attacks are a big threat.
+
+     </li>
+     <li 
+  class="enumerate" id="x1-2008x4"><span 
+class="cmbx-10">Latency. </span>A protocol for wireless mesh networks can&#8217;t just pick any nodes
+     in the network to be onion partners. If it chooses partners who are on
+     opposite sides of a thousand node network, latency will be extremely high.</li></ol>
+<!--l. 26--><p class="noindent" >
+   <h3 class="sectionHead"><span class="titlemark">2   </span> <a 
+ id="x1-30002"></a>Previous approaches in anonymous MANETs</h3>
+<!--l. 27--><p class="noindent" >The papers that advertise anonymity in wireless mesh networks for the most part do
+not achieve what they claim. <br 
+class="newline" /><br 
+class="newline" /><span 
+class="cmbx-10">ANODR </span><br 
+class="newline" />The most heavily cited paper in this area is ANODR [2]. It works by picking a
+destination node and broadcasting a message, encrypted with a public key owned by
+the destination node. This public key is appended to the message. Each
+intermediate node between the source and its destination adds its ID and a
+session key to the message, encrypting it with the public key. When the
+destination node receives the message, it decrypts the stored sessions keys
+and routing IDs, constructs an onion around both and sends them back to
+the source node. The anonymous route has been successfully established.
+<br 
+class="newline" /><br 
+class="newline" />This solution achieves high levels of anonymity against adversarial nodes but has real
+problems with sybil attacks (there could be many, many fake nodes in the network,
+certainly compromising anonymity) and with node mobility (if an established route is
+broken, the sender node will again flood the network searching for the best route, and
+every node has to perform public key operations on the flooded packet to see if they
+are indeed the recipient. If other route repair schemes are tried, latency quickly
+dominates). ANODR&#8217;s descendants (AnonDSR [3], MASK [4], SDAR [5]) are all
+subject to the same issues to varying but invariably problematic degrees.
+<br 
+class="newline" /><br 
+class="newline" /><span 
+class="cmbx-10">AOS </span><br 
+class="newline" />AOS [6] takes a dramatically different approach that appears at first to be
+promising. Nodes are separated into contiguously connected cliques of about 5-10
+nodes each. Intra-clique traffic is exchanged continuously - most of it cover
+traffic. When Alice in clique 3 has a real message to send to Eve in clique 14,
+she creates a message encrypted with the public key of Devon in clique 11,
+then Charlie in clique 10, and finally Bob in clique 2. She also constructs an
+onion router data structure, where for each onion layer (analogous to one
+hop in Tor but consisting of multiple cliques) there are multiple destination
+cliques, but only one clique in the layer has the key to strip the next layer off
+of the onion router structure. The clique that does strip a layer off of the
+router forwards the message and new router to every clique in the next layer.
+<br class="newline" />
+<br class="newline" />
+<img src="http://i.imgur.com/uHb5aPJ.png" alt="AOS">
+<br class="newline" />As a consequence of all of this, onion decryption can continue past the point at which
+the true destination node received the message. This property gives AOS strong
+destination anonymity, and the cover traffic gives AOS resistance against the GPA.
+However, because cover traffic is intra-clique only and not inter-clique, it is easy to
+trace messages back to their source clique, and from there, given enough
+messages or infiltration of the clique by adversary nodes, easy to identity the
+source node. And even though destination anonymity is good, intersection
+attacks can be attempted after observing messages being sent at both ends of
+the circuit. An attacker can use end to end correlation to guess that two
+cliques are communicating with each other - an attack made easier if the
+network has little non-cover traffic. And once an attacker has discovered two
+cliques communicating, it is only a matter of deploying some adversary nodes
+to determine which members of the cliques are the source and destination
+nodes.
+<!--l. 48--><p class="noindent" >
+   <h3 class="sectionHead"><span class="titlemark">3   </span> <a 
+ id="x1-40003"></a>Moving Forward</h3>
+<!--l. 49--><p class="noindent" >It&#8217;s clear that the ANODR approach is problematic, as node mobility leads to very
+high latency and frequent network flooding. <br 
+class="newline" />
+<canvas id="canvas" height="500px" width="500px"></canvas>
+<h4 id="label">0 circuits broken since you loaded this page.</h4> 
+Each circuit break represents a flooding of the network to establish a new circuit [7].
+<br 
+class="newline" /><br 
+class="newline" />But what about adding proper pairwise cover traffic to something like AOS? It turns
+out that this prevents the GPA from tracking messages back to their source, but it
+still doesn&#8217;t defend against adversarial nodes positioning themselves on a path and
+marching down the circuit to the source. So what if we rotate circuits frequently so
+that paths don&#8217;t exist long enough to be traced back? This would solve the problem,
+but then we run into the predecessor attack [8], which works as follows:
+<br 
+class="newline" /><br 
+class="newline" />In order for an attacker to perform end to end correlation on a circuit, they must
+control both the first and last nodes on a circuit (it is easy to correlate traffic when
+you can observe entry and exit[9]). The odds of this happening are (<span 
+class="cmmi-10">c&#x2215;n</span>)<sup><span 
+class="cmr-7">2</span></sup>, where c is
+the number of compromised nodes in the network and n is the total number of
+nodes. When the number of nodes in the network is large, (<span 
+class="cmmi-10">c&#x2215;n</span>)<sup><span 
+class="cmr-7">2</span></sup> will usually
+be small. However, given repeated circuit switching (circuits are rotated
+every 10 minutes in Tor to ensure unlinkability) this number will slowly
+increase toward 1. To prevents this, Tor selects a node to be a given user&#8217;s
+guard node, which is the first node of every circuit they construct. There
+is still an n/c chance the the guard node is compromised, but it does not
+increase with each new circuit construction. Unfortunately, guard nodes
+won?t work over a wireless medium because of the march down problem and
+increasing latency as the guard node drifts away from the source in the network.
+But what if we could rotate circuits frequently without revealing who the
+immediate predecessor node was, and still have a way to return messages to the
+sender?
+
+<!--l. 62--><p class="noindent" >
+   <h3 class="sectionHead"><span class="titlemark">4   </span> <a 
+ id="x1-50004"></a>Remote Onion Peeling</h3>
+<!--l. 63--><p class="noindent" >ROP takes ideas from the overlay networks we&#8217;ve discussed so far, as well as from
+cryptographic ratchets like OTR [10] and Axolotl [11]. The core idea is to have onion
+stripping take place at remote nodes rather than at actual onion nodes.
+<br 
+class="newline" /><br 
+class="newline" />  The sender chooses five partner nodes (<span 
+class="cmmi-10">P</span><sub><span 
+class="cmr-7">1</span></sub><span 
+class="cmmi-10">&#x2026;</span><span 
+class="cmmi-10">P</span><sub><span 
+class="cmr-7">5</span></sub>) and exchanges keys with each
+(<span 
+class="cmmi-10">K</span><sub><span 
+class="cmr-7">1</span></sub><span 
+class="cmmi-10">&#x2026;</span><span 
+class="cmmi-10">K</span><sub><span 
+class="cmr-7">5</span></sub>). These keys are analogous to chain keys in the Axolotl ratchet. For each
+turn of the ratchet, the partner nodes will derive a remote node (<span 
+class="cmmi-10">N</span><sub><span 
+class="cmr-7">1</span></sub><span 
+class="cmmi-10">&#x2026;</span><span 
+class="cmmi-10">N</span><sub><span 
+class="cmr-7">5</span></sub>) and a type
+one message key (<span 
+class="cmti-10">MK</span><sub><span 
+class="cmr-7">1</span></sub><sup><span 
+class="cmr-7">1</span></sup><span 
+class="cmmi-10">&#x2026;</span><span 
+class="cmti-10">MK</span><sub><span 
+class="cmr-7">5</span></sub><sup><span 
+class="cmr-7">1</span></sup>). Partner nodes 4 and 5 will generate an additional
+type two message key, (<span 
+class="cmti-10">MK</span><sub><span 
+class="cmr-7">2</span></sub><sup><span 
+class="cmr-7">1</span></sup><span 
+class="cmmi-10">,</span><span 
+class="cmti-10">MK</span><sub><span 
+class="cmr-7">2</span></sub><sup><span 
+class="cmr-7">2</span></sup>). Each node will then send its message
+key(s) to its remote node, encrypted with the public key of the remote node.
+<br 
+class="newline" /><br 
+class="newline" />Every time we ratchet forward, the keys that the sender shares with each of the
+partner nodes (<span 
+class="cmmi-10">K</span><sub><span 
+class="cmr-7">1</span></sub><span 
+class="cmmi-10">&#x2026;</span><span 
+class="cmmi-10">K</span><sub><span 
+class="cmr-7">5</span></sub>) are hashed and new keys derived. It is important to
+remember that the keys possessed by the partner nodes are shared by the sender, so
+that the sender knows all of the message keys as well as all of the remote nodes.
+<br 
+class="newline" /><br 
+class="newline" />When a sender has a message to send, he constructs an onion router:
+<div class="center" 
+>
+<!--l. 76--><p class="noindent" >
+<!--l. 77--><p class="noindent" ><span 
+class="cmsy-10">{</span><span 
+class="cmmi-10">N</span><sub><span 
+class="cmr-7">2</span></sub><span 
+class="cmsy-10">{</span><span 
+class="cmmi-10">N</span><sub><span 
+class="cmr-7">3</span></sub><span 
+class="cmsy-10">{</span><span 
+class="cmmi-10">N</span><sub><span 
+class="cmr-7">4</span></sub><span 
+class="cmsy-10">{</span><span 
+class="cmmi-10">N</span><sub><span 
+class="cmr-7">5</span></sub><span 
+class="cmsy-10">{</span><span 
+class="cmmi-10">N</span><sub><span 
+class="cmmi-7">s</span></sub><span 
+class="cmsy-10">}</span><span 
+class="cmti-7">MK</span><sub><span 
+class="cmr-5">5</span></sub><sup><span 
+class="cmr-5">1</span></sup><span 
+class="cmsy-10">}</span><span 
+class="cmti-7">MK</span><sub>
+<span 
+class="cmr-5">4</span></sub><sup><span 
+class="cmr-5">1</span></sup><span 
+class="cmsy-10">}</span><span 
+class="cmti-7">MK</span><sub>
+<span 
+class="cmr-5">3</span></sub><sup><span 
+class="cmr-5">1</span></sup><span 
+class="cmsy-10">}</span><span 
+class="cmti-7">MK</span><sub>
+<span 
+class="cmr-5">2</span></sub><sup><span 
+class="cmr-5">1</span></sup><span 
+class="cmsy-10">}</span><span 
+class="cmti-7">MK</span><sub>
+<span 
+class="cmr-5">1</span></sub><sup><span 
+class="cmr-5">1</span></sup></div>
+<!--l. 79--><p class="noindent" >where <span 
+class="cmmi-10">N</span><sub><span 
+class="cmmi-7">s</span></sub> is the address of the source node and <span 
+class="cmmi-10">N</span><sub><span 
+class="cmr-7">3</span></sub> is the address of the exit node. He
+also encrypts his message (and the three type two keys for this round of the ratchet)
+in layers as follows:
+<div class="center" 
+>
+<!--l. 81--><p class="noindent" >
+<!--l. 82--><p class="noindent" ><span 
+class="cmsy-10">{{{</span>message, <span 
+class="cmti-10">MK</span><sub><span 
+class="cmr-7">1</span></sub><sup><span 
+class="cmr-7">2</span></sup>, <span 
+class="cmti-10">MK</span><sub><span 
+class="cmr-7">2</span></sub><sup><span 
+class="cmr-7">2</span></sup>, <span 
+class="cmti-10">MK</span><sub><span 
+class="cmr-7">3</span></sub><sup><span 
+class="cmr-7">2</span></sup><span 
+class="cmsy-10">}</span><span 
+class="cmti-7">MK</span><sub><span 
+class="cmr-5">3</span></sub><sup><span 
+class="cmr-5">1</span></sup><span 
+class="cmsy-10">}</span><span 
+class="cmti-7">MK</span><sub><span 
+class="cmr-5">2</span></sub><sup><span 
+class="cmr-5">1</span></sup><span 
+class="cmsy-10">}</span><span 
+class="cmti-7">MK</span><sub><span 
+class="cmr-5">1</span></sub><sup><span 
+class="cmr-5">1</span></sup></div>
+<!--l. 85--><p class="indent" >   Both the message and the onion router are sent to <span 
+class="cmmi-10">N</span><sub><span 
+class="cmr-7">1</span></sub>. There, <span 
+class="cmmi-10">N</span><sub><span 
+class="cmr-7">1</span></sub>, having already
+received <span 
+class="cmti-10">MK</span><sub><span 
+class="cmr-7">1</span></sub><sup><span 
+class="cmr-7">1</span></sup> from the first partner node, strips a layer of encryption from
+the message and from the onion router, revealing the address of <span 
+class="cmmi-10">N</span><sub><span 
+class="cmr-7">2</span></sub>. The
+same happens at <span 
+class="cmmi-10">N</span><sub><span 
+class="cmr-7">2</span></sub>, and finally the message arrives at <span 
+class="cmmi-10">N</span><sub><span 
+class="cmr-7">3</span></sub>, where the third
+layer of encryption is stripped from the message, revealing the plaintext. At
+this point, because <span 
+class="cmmi-10">N</span><sub><span 
+class="cmr-7">3</span></sub> is the exit node, it sends the data to its destination,
+be it another node in the MANET or a server somewhere on the internet.
+<br 
+class="newline" /><br 
+class="newline" />When <span 
+class="cmmi-10">N</span><sub><span 
+class="cmr-7">3</span></sub> receives a response, it needs to send it back to the source node. But
+
+because <span 
+class="cmmi-10">N</span><sub><span 
+class="cmr-7">3</span></sub> doesn&#8217;t know where <span 
+class="cmmi-10">N</span><sub><span 
+class="cmmi-7">s</span></sub> is, and because it doesn&#8217;t even know where its
+immediate predecessor <span 
+class="cmmi-10">N</span><sub><span 
+class="cmr-7">2</span></sub> is, it needs to just keep sending the message forward
+along the path specified by the onion router. So <span 
+class="cmmi-10">N</span><sub><span 
+class="cmr-7">3</span></sub> uses <span 
+class="cmti-10">MK</span><sub><span 
+class="cmr-7">3</span></sub><sup><span 
+class="cmr-7">1</span></sup> to strip
+another layer from the onion router, revealing the location of <span 
+class="cmmi-10">N</span><sub><span 
+class="cmr-7">4</span></sub>. However,
+before <span 
+class="cmmi-10">N</span><sub><span 
+class="cmr-7">3</span></sub> can send the reply on, it needs to construct a new onion around
+the message so that <span 
+class="cmmi-10">N</span><sub><span 
+class="cmr-7">4</span></sub> and <span 
+class="cmmi-10">N</span><sub><span 
+class="cmr-7">5</span></sub> will not be able to read it (and so that its
+appearance will change at each hop of the circuit). This is where the type
+two message keys become important. <span 
+class="cmmi-10">N</span><sub><span 
+class="cmr-7">3</span></sub> constructs an onion around the
+reply:
+<div class="center" 
+>
+<!--l. 90--><p class="noindent" >
+<!--l. 91--><p class="noindent" ><span 
+class="cmsy-10">{{{</span>reply<span 
+class="cmsy-10">}</span><span 
+class="cmti-7">MK</span><sub><span 
+class="cmr-5">3</span></sub><sup><span 
+class="cmr-5">2</span></sup><span 
+class="cmsy-10">}</span><span 
+class="cmti-7">MK</span><sub><span 
+class="cmr-5">2</span></sub><sup><span 
+class="cmr-5">2</span></sup><span 
+class="cmsy-10">}</span><span 
+class="cmti-7">MK</span><sub><span 
+class="cmr-5">1</span></sub><sup><span 
+class="cmr-5">2</span></sup></div>
+<!--l. 94--><p class="indent" >   <span 
+class="cmmi-10">N</span><sub><span 
+class="cmr-7">3</span></sub> sends the reply and the onion router to <span 
+class="cmmi-10">N</span><sub><span 
+class="cmr-7">4</span></sub>. <span 
+class="cmmi-10">N</span><sub><span 
+class="cmr-7">4</span></sub> will have already received
+<span 
+class="cmti-10">MK</span><sub><span 
+class="cmr-7">4</span></sub><sup><span 
+class="cmr-7">1</span></sup> and <span 
+class="cmti-10">MK</span><sub><span 
+class="cmr-7">1</span></sub><sup><span 
+class="cmr-7">2</span></sup> from <span 
+class="cmmi-10">P</span><sub><span 
+class="cmr-7">4</span></sub>. <span 
+class="cmmi-10">N</span><sub><span 
+class="cmr-7">4</span></sub> strips a layer from both the onion router and reply
+and sends them to <span 
+class="cmmi-10">N</span><sub><span 
+class="cmr-7">5</span></sub>. <span 
+class="cmmi-10">N</span><sub><span 
+class="cmr-7">5</span></sub> receives <span 
+class="cmti-10">MK</span><sub><span 
+class="cmr-7">5</span></sub><sup><span 
+class="cmr-7">1</span></sup> and <span 
+class="cmti-10">MK</span><sub><span 
+class="cmr-7">2</span></sub><sup><span 
+class="cmr-7">2</span></sup> and strips another layer
+from the message and another layer from the onion router, revealing the
+source node <span 
+class="cmmi-10">N</span><sub><span 
+class="cmmi-7">s</span></sub>. <span 
+class="cmmi-10">N</span><sub><span 
+class="cmr-7">5</span></sub> sends the router and the reply, which now looks like
+this:
+<div class="center" 
+>
+<!--l. 96--><p class="noindent" >
+<!--l. 97--><p class="noindent" ><span 
+class="cmsy-10">{</span>reply<span 
+class="cmsy-10">}</span><span 
+class="cmti-7">MK</span><sub><span 
+class="cmr-5">3</span></sub><sup><span 
+class="cmr-5">2</span></sup></div>
+<!--l. 99--><p class="noindent" >to <span 
+class="cmmi-10">N</span><sub><span 
+class="cmmi-7">s</span></sub>, who strips the final layer off of the onion router, revealing the message is for him,
+and strips off the final layer from the reply, revealing the plaintext.
+   <h3 class="likesectionHead"><a 
+ id="x1-60004"></a>Anonymity Analysis</h3>
+<!--l. 101--><p class="noindent" >Because no node on the circuit knows the location of the node that just sent it a
+message (the nodes on a circuit are likely not contiguously connected and are instead
+connected via proxy chains of intermediate nodes), the circuit can be rotated
+frequently without becoming vulnerable to the predecessor attack. If a sender is not
+able to frequently rotate their anonymity circuit, they must continue to use the same
+one for long periods of time, subjecting them to dramatic latency increases as the
+onion nodes drift apart. Of course, there is a tradeoff between how widely partner
+nodes are allowed to cast their net in selecting remote nodes (the size of the
+anonymity set) and the amount of latency that will exist for any any protocol for
+MANETs. <br 
+class="newline" /><br 
+class="newline" />ROP appears to be better than existing protocols at overcoming two of the four
+issues enumerated above &#8211; march down and latency, but what about dealing with global
+passive attacks and sybil attacks? <br 
+class="newline" /><br 
+class="newline" />
+<span 
+class="cmbx-10">GPA </span>This is much easier dealt with than sybil attacks. Nodes who are contiguously
+connected to each other exchange a constant stream of encrypted, constant size cover
+traffic. Real traffic is inserted into this stream. The higher the rate of cover traffic,
+the higher the bandwidth of the network.
+<br 
+class="newline" />
+<br 
+class="newline" />
+<span 
+class="cmbx-10">Sybil </span>attacks are difficult to defend against in peer to peer networks. The ROP
+
+solution is to use a web of trust with a central node whose identity is secret conducting
+social network analysis on the network [12], anonymously broadcasting the
+identities of probable sybil nodes. <br 
+class="newline" /><br 
+class="newline" />When node A and node B connect to each other, they do a handshake to verify that
+each possesses the private key counterpart to the public key that is on record for
+them in the network. If the handshake is successful, the message <span 
+class="cmsy-10">{</span>A is connected to
+B<span 
+class="cmsy-10">}</span>, signed by A is flooded through the network. We exploit the property that even if
+node B is attempting to conduct a sybil attack, it cannot display other false
+identities to A while they are still connected. If node B were then to attempt to
+connect to node C, claiming to be node D, the connection event would be propagated
+through the network but then, if A and C were connected, the two could conduct as
+RSSI based check to attempt to verify whether or not B and D are the same node.<br 
+class="newline" /><br 
+class="newline" />Because identity verifications are only valid while the two nodes are connected, an
+attacker is severely limited in the number of false identities they can present, limited
+further by the RSSI checking. And because it is difficult for an attacker to establish
+false identities, the social network analysis
+algorithm run by the central node can be very successful in identifying sybil nodes.
+<br 
+class="newline" />
+<!--l. 123--><p class="noindent" >
+   <h3 class="sectionHead"><span class="titlemark">5   </span> <a 
+ id="x1-70005"></a>Conclusion</h3>
+<!--l. 124--><p class="noindent" >ROP constitutes what I believe to be an improvement in routing protocol for
+anonymity in mobile ad hoc networks. In contrast with existing protocols,
+ROP offers better anonymity and much better efficiency in the face of node
+mobility.
+
+<!--l. 126--><p class="noindent" >
+   <h3 class="likesectionHead"><a 
+ id="x1-80005"></a>References</h3>
+<!--l. 126--><p class="noindent" >
+   <div class="thebibliography">
+   <p class="bibitem" ><span class="biblabel">
+ [1]<span class="bibsp">&#x00A0;&#x00A0;&#x00A0;</span></span><a 
+ id="Xtor"></a>R. Dingledine, N. Mathewson, P. Syverson, Tor: The Second-generation
+   Onion  Router.  <span 
+class="cmti-10">Proceedings of the 13th Conference on USENIX Security</span>
+   <span 
+class="cmti-10">Symposium - Volume 13 </span>1&#8211;21, 2004.
+   </p>
+   <p class="bibitem" ><span class="biblabel">
+ [2]<span class="bibsp">&#x00A0;&#x00A0;&#x00A0;</span></span><a 
+ id="Xanodr"></a>Jiejun  Kong  and  Xiaoyan  Hong,  ANODR:  ANonymous  On  Demand
+   Routing with Untraceable Routes for Mobile Ad-hoc Networks. 2003.
+   </p>
+   <p class="bibitem" ><span class="biblabel">
+ [3]<span class="bibsp">&#x00A0;&#x00A0;&#x00A0;</span></span><a 
+ id="Xanondsr"></a>Ronggong  Song,  Larry  Korba,  and  George  Yee.  AnonDSR:  efficient
+   anonymous  dynamic  source  routing  for  mobile  ad-hoc  networks.  <span 
+class="cmti-10">In</span>
+   <span 
+class="cmti-10">Proceedings of the 3rd ACM workshop on Security of ad hoc and sensor</span>
+   <span 
+class="cmti-10">networks (SASN &#8217;05). </span>ACM, New York, NY, USA, 33-42. 2005.
+   </p>
+   <p class="bibitem" ><span class="biblabel">
+ [4]<span class="bibsp">&#x00A0;&#x00A0;&#x00A0;</span></span><a 
+ id="Xmask"></a>Yanchao  Zhang;  Wei  Liu;  Wenjing  Lou;  Yuguang  Fang,  MASK:
+   anonymous   on-demand   routing   in   mobile   ad   hoc   networks,   <span 
+class="cmti-10">IEEE</span>
+   <span 
+class="cmti-10">Transactions  on  Wireless  Communications</span>,  vol.  5,  no.  9,  pp.2376-2385,
+   September 2006.
+   </p>
+   <p class="bibitem" ><span class="biblabel">
+ [5]<span class="bibsp">&#x00A0;&#x00A0;&#x00A0;</span></span><a 
+ id="Xsdar"></a>Boukerche,  A.;  El-Khatib,  K.;  Li  Xu;  Korba,  L.,  SDAR:  a  secure
+   distributed  anonymous  routing  protocol  for  wireless  and  mobile  ad  hoc
+   networks,  <span 
+class="cmti-10">29th  Annual  IEEE  International  Conference  on  Computer</span>
+   <span 
+class="cmti-10">Networks, 2004</span>, pp.618-624, November 2004.
+   </p>
+   <p class="bibitem" ><span class="biblabel">
+ [6]<span class="bibsp">&#x00A0;&#x00A0;&#x00A0;</span></span><a 
+ id="Xaos"></a>Rui  Zhang,  Yanchao  Zhang,  and  Yuguang  Fang.  2011.  AOS:  an
+   anonymous overlay system for mobile ad hoc networks. <span 
+class="cmti-10">Wireless Networking.</span>
+   17, 4 (May 2011)
+   </p>
+   <p class="bibitem" ><span class="biblabel">
+ [7]<span class="bibsp">&#x00A0;&#x00A0;&#x00A0;</span></span><a 
+ id="Xnote"></a>To be fair, ANODR is a stateless protocol while ROP is stateful and
+   assumes that each node has semi-perfect knowledge of the network. However,
+   a stateful version of ANODR, despite being more efficient at route repair,
+   would still suffer from the same problems that plague stateless ANODR.
+
+   </p>
+   <p class="bibitem" ><span class="biblabel">
+ [8]<span class="bibsp">&#x00A0;&#x00A0;&#x00A0;</span></span><a 
+ id="Xpred"></a>Matthew K. Wright, Micah Adler, Brian Neil Levine, and Clay Shields.
+   2004.  The  predecessor  attack:  An  analysis  of  a  threat  to  anonymous
+   communications  systems.  <span 
+class="cmti-10">ACM Trans. Inf. Syst. Secur. </span>7,  4  (November
+   2004)
+   </p>
+   <p class="bibitem" ><span class="biblabel">
+ [9]<span class="bibsp">&#x00A0;&#x00A0;&#x00A0;</span></span><a 
+ id="Xexit"></a>Tor          Blog          -          One          Cell          is          Enough,
+   https://blog.torproject.org/blog/one-cell-enough
+   </p>
+   <p class="bibitem" ><span class="biblabel">
+ [10]<span class="bibsp">&#x00A0;&#x00A0;&#x00A0;</span></span><a 
+ id="Xotr"></a>Nikita Borisov, Ian Goldberg, and Eric Brewer. 2004. Off-the-record
+   Communication,  or,  Why  Not  to  Use  PGP.  <span 
+class="cmti-10">In Proceedings of the ACM</span>
+   <span 
+class="cmti-10">workshop on Privacy in the Electronic Society WPES &#8217;04</span>. ACM, New York,
+   2004.
+   </p>
+   <p class="bibitem" ><span class="biblabel">
+ [11]<span class="bibsp">&#x00A0;&#x00A0;&#x00A0;</span></span><a 
+ id="Xaxoltl"></a>Open             Whisper             Systems             -             Advanced Ratcheting,
+   https://whispersystems.org/blog/advanced-ratcheting/
+</p>
+   </div>
+    
+</body></html> 
+
+
+
