@@ -141,3 +141,9 @@ div.gather-star {text-align:center;}
     display: block;
 }
 
+#label {
+    font-size: 16px;
+    color: grey;
+    font-weight: normal;
+}
+
