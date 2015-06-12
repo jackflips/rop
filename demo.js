@@ -30,6 +30,15 @@ var possiblePaths;
 var currentPath;
 var circuitsBroken;
 var connectionColors;
+var canvasWidth;
+
+function getRandInRange(min, max) {
+    return Math.random() * (max - min) + min;
+}
+
+function getRandIntInRange(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+}
 
 function distanceBetweenTwoVectors(v1, v2) {
     var diff = [v2[0] - v1[0], v2[1] - v1[1]];
@@ -68,11 +77,12 @@ function findPathHelper(currentNode, hop, hopsSoFar) {
                 if (distanceBetweenTwoVectors(nodes[currentNode].currentLocation, nodes[i].currentLocation) < connectionDistance) {
                     var newPath = hopsSoFar.slice();
                     newPath.push(i);
-                    possiblePaths.push(newPath);
                     findPathHelper(i, hop+1, newPath);
                 }
             }
         }
+    } else {
+        possiblePaths.push(hopsSoFar);
     }
 }
 
@@ -82,23 +92,16 @@ function pathBroken() {
 }
 
 function findPath() {
+    console.log("find path");
+    possiblePaths = [];
     findPathHelper(0, 0, []);
-    for (i=possiblePaths.length-1; i>0; i--) {
-        if (pathStillValid(possiblePaths[i])) {
-            var path = possiblePaths[i];
-            possiblePaths = [];
-            return path;
-        }
-    }
-    return [];
+    if (possiblePaths.length > 0) {
+        return possiblePaths[getRandIntInRange(0, possiblePaths.length-1)];
+    } else return [];
 }
 
 function magnitude(x1, x2) {
     return Math.sqrt(Math.pow(x1, 2) + Math.pow(x2, 2));
-}
-
-function getRandInRange(min, max) {
-    return Math.random() * (max - min) + min;
 }
 
 function selectNewTargetsForNodes() {
@@ -113,12 +116,12 @@ function selectNewTargetsForNodes() {
         }
         theNode.angle = getRandInRange(theNode.angle-.35, theNode.angle+.35);
         theNode.speed = getRandInRange(theNode.speed-5, theNode.speed+5);
-        if (theNode.speed > 30) {
+        if (theNode.speed > 16) {
             theNode.speed = 30;
-        } else if (theNode.speed < -30) {
+        } else if (theNode.speed < -16) {
             theNode.speed = -30;
         }
-        if (theNode.currentLocation[0] > 480 || theNode.currentLocation[0] < 20 || theNode.currentLocation[1] > 480 || theNode.currentLocation[1] < 20) {
+        if (theNode.currentLocation[0] > (canvasWidth - 20) || theNode.currentLocation[0] < 20 || theNode.currentLocation[1] > 480 || theNode.currentLocation[1] < 20) {
             theNode.angle += 180;
         }
     }
@@ -129,18 +132,20 @@ function updateNodes() {
         var theNode = nodes[node];
         var x = (theNode.speed / fps) * Math.sin(theNode.angle);
         var y = (theNode.speed / fps) * Math.cos(theNode.angle);
-        theNode.currentLocation = [(theNode.currentLocation[0] + x).mod(500), (theNode.currentLocation[1] + y).mod(500)];
+        theNode.currentLocation = [(theNode.currentLocation[0] + x).mod(canvasWidth), (theNode.currentLocation[1] + y).mod(500)];
 
     }
     if (!pathStillValid(currentPath)) {
         if (currentPath && currentPath.length > 2) {
             pathBroken();
+            currentPath = findPath();
+        } else {
+            currentPath = findPath();
         }
     }
     for (node in nodes) {
         nodes[node].connected = false;
     }
-    currentPath = findPath();
     for (hop in currentPath) {
         nodes[currentPath[hop]].connected = true;
     }
@@ -152,7 +157,7 @@ function draw() {
     for (i=0; i<nodes.length; i++) {
         if (i == 0) {
             context.fillStyle = "#FF0000";
-        } else if (currentPath.indexOf(i) != -1) {
+        } else if (currentPath && currentPath.indexOf(i) != -1) {
             context.fillStyle = "#85d316"
         } else {
             context.fillStyle = "#0066CC";
@@ -172,7 +177,7 @@ function draw() {
             context.arc(nodes[i].currentLocation[0], nodes[i].currentLocation[1], 100, 0, Math.PI*2, false);
             context.stroke();
         }
-        if (currentPath.indexOf(i) != -1 && i > 0) {
+        if (currentPath && currentPath.indexOf(i) != -1 && i > 0) {
             context.fillStyle = "#000000"
             context.fillText(currentPath.indexOf(i), nodes[i].currentLocation[0]-3, nodes[i].currentLocation[1]+3);
         }
@@ -182,21 +187,24 @@ function draw() {
 
 $(function() {
     fps = 40;
+    canvasWidth = $(window).width();
     nodes = [];
     speedLimit = 2.5;
     counter = 0;
     numHops = 6;
     connectionDistance = 100;
-    numNodes = 100;
+    numNodes = (canvasWidth * 500) / 2500;
     possiblePaths = [];
     circuitsBroken = 0;
     for (i=0; i<numNodes; i++) {
         if (i == 0) {
-            nodes.push(new Node([getRandInRange(0, 500), getRandInRange(0, 500)], 0, 1, true));
+            nodes.push(new Node([getRandInRange(0, canvasWidth), getRandInRange(0, canvasWidth)], 0, 1, true));
         }
-        nodes.push(new Node([getRandInRange(0, 500), getRandInRange(0, 500)], 0, 1, false));
+        nodes.push(new Node([getRandInRange(0, canvasWidth), getRandInRange(0, canvasWidth)], 0, 1, false));
     }
     var canvas = document.getElementById('canvas');
+    canvas.width = canvasWidth;
+
     if (canvas.getContext) {
         context = canvas.getContext('2d');
     }

@@ -129,20 +129,15 @@ table.gather {width:100%;}
 div.gather-star {text-align:center;}
 /* end css.sty */
 
-#canvas {
+#aos {
     margin-left: auto;
     margin-right: auto;
-    margin-top: 15px;
-    width: 500px;
     display: block;
 }
 
-#label {
+#canvas {
     margin-left: auto;
     margin-right: auto;
-    margin-top: 15px;
-    width: 400px;
     display: block;
-    text-align: center;
 }
 
