@@ -193,7 +193,7 @@ $(function() {
     counter = 0;
     numHops = 6;
     connectionDistance = 100;
-    numNodes = (canvasWidth * 500) / 2500;
+    numNodes = Math.floor((canvasWidth * 500) / 2500);
     possiblePaths = [];
     circuitsBroken = 0;
     for (i=0; i<numNodes; i++) {
